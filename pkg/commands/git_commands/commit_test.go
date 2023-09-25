@@ -58,6 +58,8 @@ func TestCommitCommitCmdObj(t *testing.T) {
 		configSignoff        bool
 		configSkipHookPrefix string
 		expectedArgs         []string
+		expectedEnvVars      []string
+		envVars              map[string]string
 	}
 
 	scenarios := []scenario{
@@ -97,6 +99,15 @@ func TestCommitCommitCmdObj(t *testing.T) {
 			configSkipHookPrefix: "WIP",
 			expectedArgs:         []string{"commit", "--no-verify", "--signoff", "-m", "WIP: test"},
 		},
+		{
+			testName:             "Commit with environment variables",
+			summary:              "test",
+			configSignoff:        false,
+			configSkipHookPrefix: "",
+			expectedArgs:         []string{"commit", "-m", "test"},
+			expectedEnvVars:      []string{"COLORED_OUTPUT=1", "OUTPUT_TYPE=short"},
+			envVars:              map[string]string{"COLORED_OUTPUT": "1", "OUTPUT_TYPE": "short"},
+		},
 	}
 
 	for _, s := range scenarios {
@@ -105,11 +116,19 @@ func TestCommitCommitCmdObj(t *testing.T) {
 			userConfig := config.GetDefaultConfig()
 			userConfig.Git.Commit.SignOff = s.configSignoff
 			userConfig.Git.SkipHookPrefix = s.configSkipHookPrefix
+			userConfig.Git.Commit.Environment = s.envVars
 
-			runner := oscommands.NewFakeRunner(t).ExpectGitArgs(s.expectedArgs, "", nil)
+			runner := oscommands.NewFakeRunner(t).ExpectFunc("matches git args and env", func(cmdObj oscommands.ICmdObj) bool {
+				assert.Equal(t, cmdObj.Args()[1:], s.expectedArgs)
+				for _, envVar := range s.expectedEnvVars {
+					assert.Contains(t, cmdObj.GetCmd().Env, envVar)
+				}
+
+				return true
+			}, "", nil)
 			instance := buildCommitCommands(commonDeps{userConfig: userConfig, runner: runner})
-
-			assert.NoError(t, instance.CommitCmdObj(s.summary, s.description).Run())
+			cmdObj := instance.CommitCmdObj(s.summary, s.description)
+			assert.NoError(t, cmdObj.Run())
 			runner.CheckForMissingCalls()
 		})
 	}

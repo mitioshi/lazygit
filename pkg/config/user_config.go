@@ -108,7 +108,8 @@ type PagingConfig struct {
 }
 
 type CommitConfig struct {
-	SignOff bool `yaml:"signOff"`
+	SignOff     bool              `yaml:"signOff"`
+	Environment map[string]string `yaml:"environment"`
 }
 
 type MergingConfig struct {

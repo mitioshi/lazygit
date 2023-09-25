@@ -70,14 +70,14 @@ func (self *CommitCommands) CommitCmdObj(summary string, description string) osc
 	messageArgs := self.commitMessageArgs(summary, description)
 
 	skipHookPrefix := self.UserConfig.Git.SkipHookPrefix
-
+	envVars := self.userEnvVars()
 	cmdArgs := NewGitCmd("commit").
 		ArgIf(skipHookPrefix != "" && strings.HasPrefix(summary, skipHookPrefix), "--no-verify").
 		ArgIf(self.signoffFlag() != "", self.signoffFlag()).
 		Arg(messageArgs...).
 		ToArgv()
 
-	return self.cmd.New(cmdArgs)
+	return self.cmd.New(cmdArgs).AddEnvVars(envVars...)
 }
 
 func (self *CommitCommands) RewordLastCommitInEditorCmdObj() oscommands.ICmdObj {
@@ -265,4 +265,16 @@ func (self *CommitCommands) GetCommitMessageFromHistory(value int) (string, erro
 		return "", ErrInvalidCommitIndex
 	}
 	return self.GetCommitMessage(formattedHash)
+}
+
+func (self *CommitCommands) userEnvVars() []string {
+	var envVars []string
+	if self.UserConfig == nil {
+		return envVars
+	}
+	for key, value := range self.UserConfig.Git.Commit.Environment {
+		envVars = append(envVars, key+"="+value)
+	}
+
+	return envVars
 }

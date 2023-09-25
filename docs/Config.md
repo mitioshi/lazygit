@@ -91,6 +91,8 @@ git:
     useConfig: false
   commit:
     signOff: false
+    environment:
+      FORCE_COLOR: 1
   merging:
     # only applicable to unix users
     manualCommit: false
